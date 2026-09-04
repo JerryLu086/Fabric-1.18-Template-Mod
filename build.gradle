@@ -1,0 +1,284 @@
+plugins {
+    id 'idea'
+    id 'eclipse'
+    id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = "${mc_version}-${mod_version}"
+group = "${mod_group}.${mod_id}"
+
+base {
+    archivesName = archives_base_name
+}
+
+idea {
+    module {
+        downloadJavadoc = autoJavadocSources
+        downloadSources = autoJavadocSources
+    }
+}
+
+eclipse {
+    classpath {
+        downloadJavadoc = autoJavadocSources
+        downloadSources = autoJavadocSources
+    }
+}
+
+sourceSets {
+    main {
+        resources {
+            exclude ".cache"
+            srcDirs += "src/main/generated"
+        }
+    }
+    // <editor-fold defaultstate="collapsed" desc="Build Config #1-1: Datagen #1">
+    // I like separating datagen from the final compiled jar personally, not necessary anyways.
+    // If you feel like the final jar (also sources.jar) should include it, remove this and 1-2.
+    datagen {
+        compileClasspath += main.compileClasspath
+        runtimeClasspath += main.runtimeClasspath
+        compileClasspath += main.output
+        runtimeClasspath += main.output
+    }
+    // </editor-fold>
+}
+
+loom {
+    runs {
+        datagen {
+            client()
+
+            name "Data Generation"
+            vmArg "-Dfabric-api.datagen"
+            vmArg "-Dfabric-api.datagen.output-dir=${file("src/main/generated")}"
+            vmArg "-Dfabric-api.datagen.modid=${mod_id}"
+
+            // <editor-fold defaultstate="collapsed" desc="Build Config #1-2: Datagen #2">
+            source sourceSets.datagen
+            // </editor-fold>
+        }
+    }
+}
+
+repositories {
+	// All repos are specified with their corresponding groups, remove those you don't need.
+    maven {
+        // Parchment Mappings
+        url = "https://maven.parchmentmc.org"
+    }
+    maven {
+        url = "https://mvn.devos.one/snapshots/"
+        content {
+            [
+                "com.simibubi.create", // Create
+                "com.tterrag.registrate_fabric", // Registrate (req. by: Create)
+                "io.github.fabricators_of_create", // Porting Lib (req. by: Create, Hephaestus)
+                "io.github.tropheusj", // Milk Lib, Dripstone Fluid Lib, Serialization Hooks (all req. by: Create)
+                "me.alphamode", // Forge Tags (req. by: Create, Hephaestus)
+                "slimeknights.tconstruct", // Hephaestus
+                "slimeknights.mantle", // Mantle (req. by: Hephaestus)
+            ].each { includeGroup(it) }
+        }
+    }
+    maven {
+        url = "https://modmaven.dev"
+        content {
+            includeGroup "com.jozufozu.flywheel" // Flywheel (req. by: Create)
+        }
+    }
+    maven {
+        url = "https://maven.wispforest.io/releases/"
+        content {
+            includeGroup "me.alphamode" // Star Fluid (req. by: Hephaestus)
+        }
+    }
+    maven {
+        url = "https://maven.shedaniel.me/"
+        content {
+            [
+                "dev.architectury", // Architectury (req. by: Hephaestus, REI)
+                "me.shedaniel.cloth", // Cloth Config (req. by: REI)
+                "me.shedaniel", // REI
+            ].each { includeGroup(it) }
+        }
+    }
+    maven {
+        url = "https://raw.githubusercontent.com/Fuzss/modresources/main/maven/"
+        content {
+            includeGroup "net.minecraftforge" // Forge Config API Port (req. by: Create)
+        }
+    }
+    maven {
+        url = "https://maven.ladysnake.org/releases"
+        content {
+            [
+                "com.github.Chocohead", // Fabric ASM (req. by: Create, Hephaestus)
+                "com.github.LlamaLad7", // Mixin Extras
+                "dev.onyxstudios.cardinal-components-api", // Cardinal Components (req. by: Hephaestus)
+                "io.github.ladysnake", // Satin (req. by: Hephaestus)
+                "com.github.AlphaMode", // Fake Config (req. by: Hephaestus)
+            ].each { includeGroup(it) }
+        }
+    }
+    maven {
+        url = "https://maven.jamieswhiteshirt.com/libs-release"
+        content {
+            includeGroup "com.jamieswhiteshirt" // Reach Entity Attributes (req. by: Hephaestus)
+        }
+    }
+    maven {
+        url = "https://maven.terraformersmc.com/releases/"
+        content {
+            [
+                "com.terraformersmc", // Mod Menu
+            ].each { includeGroup(it) }
+        }
+    }
+    maven {
+        url = "https://api.modrinth.com/maven"
+        content {
+            includeGroup "maven.modrinth" // LazyDFU, Ad Astra
+        }
+    }
+    flatDir {
+        // Shader ID Dual-Patcher, will be moved onto Modrinth after review.
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    // To change the versions see the gradle.properties file
+    minecraft "com.mojang:minecraft:${mc_version}"
+
+    // <editor-fold defaultstate="collapsed" desc="Build Config #2: Mappings">
+    // Just switch to the one you prefer and comment or remove the other one.
+    mappings loom.layered {
+        mappings "net.fabricmc:yarn:${yarn_version}:v2"
+        // Added to use Hephaestus with Yarn, you will probably need this to build with other mods like Custom Machinery.
+        // Remove the "override.tiny" file in the root if you use Parchment.
+        // Credits: https://codeberg.org/The-Shortman/Astral-Signals/commit/4efbe1a25f6a4c8b1ef895a7b10c5582bf451520
+        mappings file("override.tiny")
+    }
+    // mappings(loom.layered {
+    //     officialMojangMappings()
+    //     parchment("org.parchmentmc.data:parchment-${mc_version}:${parchment_version}@zip")
+    // })
+    // </editor-fold>
+
+    modImplementation("net.fabricmc:fabric-loader:${loader_version}")
+
+    // Fabric API. This is technically optional, but you probably want it anyway.
+    modImplementation("net.fabricmc.fabric-api:fabric-api:${fabric_api_version}")
+
+    // <editor-fold defaultstate="collapsed" desc="Build Config #3-1: Dependencies - Create">
+    modImplementation("com.simibubi.create:create-fabric-${mc_version}:${create_version}")
+    modImplementation("net.minecraftforge:forgeconfigapiport-fabric:${forge_config_api_port_version}")
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="Build Config #3-2: Dependencies - Hephaestus & Mantle">
+    modImplementation("slimeknights.tconstruct:Hephaestus:${hephaestus_version}") {
+       exclude(group : "curse.maven")
+       exclude(group : "me.shedaniel")
+       exclude(group : "mezz.jei")
+       exclude(group : "mcjty.theoneprobe")
+    }
+
+    // Have to add this back despite already JiJ'd in TC. Mantle's Accesswidener seems to not work at all in dev if not directly added.
+    modImplementation("slimeknights.mantle:Mantle:${mantle_version}") {
+       exclude(group: "curse.maven")
+       exclude(group: "me.shedaniel")
+    }
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="Build Config #3-3: Dependencies - Ad Astra">
+    modImplementation("maven.modrinth:ad-astra:${ad_astra_version}")
+    modImplementation("teamreborn:energy:${teamreborn_energy_version}")
+    modImplementation("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}")
+    // </editor-fold>
+
+    // QoL
+    modLocalRuntime("com.terraformersmc:modmenu:${modmenu_version}")
+    modLocalRuntime("me.shedaniel:RoughlyEnoughItems-fabric:${rei_version}")
+    modLocalRuntime("maven.modrinth:lazydfu:${lazydfu_version}")
+    // <editor-fold defaultstate="collapsed" desc="Build Config #5: DCWA">
+    // Enable if you got dimension mods like Ad Astra that will trigger the experimental settings warning.
+    modLocalRuntime("maven.modrinth:dcwa:${dcwa_version}")
+    // </editor-fold>
+
+    // <editor-fold defaultstate="collapsed" desc="Build Config #4-2: Shader ID Conflicts #2">
+	// Enable if you have combination of mods that patch the shader IDs twice.
+    // A notable example is Fabric API 0.77.0 paired with Satin, which is also bundled with Hephaestus.
+    // Remove the line along with the libs file and the flatDir repo if you don't need this.
+    modImplementation include(":shader_id_dual_patcher-fabric:1.18.2-1.0")
+    // </editor-fold>
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("net.fabricmc:fabric-loader:${loader_version}")
+        // // <editor-fold defaultstate="collapsed" desc="Build Config #6: Force Porting Lib Version">
+        // // Enable if you're adding both Create Fabric and Hephaestus.
+        // force("io.github.fabricators_of_create:Porting-Lib:${porting_lib_version}")
+        // // </editor-fold>
+    }
+}
+
+processResources {
+    // Stolen from NeoForge ModDevGradle
+    var replaceProperties = [
+            mc_version         : mc_version,
+            java_version       : java_version,
+            loader_version     : loader_version,
+            fabric_api_version : fabric_api_version,
+            mod_id             : mod_id,
+            mod_name           : mod_name,
+            mod_version        : mod_version,
+            mod_authors        : mod_authors,
+            mod_credits        : mod_credits,
+            mod_license        : mod_license,
+            mod_group          : mod_group,
+            mod_main_class     : mod_main_class,
+            mod_description    : mod_description,
+            mod_homepage       : mod_homepage,
+            mod_sources        : mod_sources
+    ]
+
+    inputs.properties replaceProperties
+    filesMatching(["fabric.mod.json", "*.mixins.json"]) {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    // The newer versions
+    it.options.release = java_version.toInteger()
+}
+
+java {
+    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
+    // if it is present.
+    // If you remove this line, sources will not be generated.
+    withSourcesJar()
+
+    sourceCompatibility = JavaVersion.toVersion(java_version.toInteger())
+    targetCompatibility = JavaVersion.toVersion(java_version.toInteger())
+}
+
+// Configure the maven publication
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            from components.java
+        }
+    }
+
+    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
+    repositories {
+        // Add repositories to publish to here.
+        // Notice: This block does NOT have the same function as the block in the top level.
+        // The repositories here will be used for publishing your artifact, not for
+        // retrieving dependencies.
+    }
+}
