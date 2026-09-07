@@ -115,7 +115,6 @@ repositories {
         content {
             [
                 "com.github.Chocohead", // Fabric ASM (req. by: Create, Hephaestus)
-                "com.github.LlamaLad7", // Mixin Extras
                 "dev.onyxstudios.cardinal-components-api", // Cardinal Components (req. by: Hephaestus)
                 "io.github.ladysnake", // Satin (req. by: Hephaestus)
                 "com.github.AlphaMode", // Fake Config (req. by: Hephaestus)
@@ -216,6 +215,8 @@ dependencies {
 }
 
 configurations.all {
+    // Mixin Extras now comes bundled with Fabric loader, the old ones with the outdated namespaces should be excluded.
+    exclude(group: "com.github.LlamaLad7")
     resolutionStrategy {
         force("net.fabricmc:fabric-loader:${loader_version}")
         // // <editor-fold defaultstate="collapsed" desc="Build Config #6: Force Porting Lib Version">
