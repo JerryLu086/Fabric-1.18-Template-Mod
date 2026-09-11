@@ -46,6 +46,8 @@ sourceSets {
 }
 
 loom {
+    accessWidenerPath = file("src/main/resources/${mod_id}.accesswidener")
+
     runs {
         datagen {
             client()
